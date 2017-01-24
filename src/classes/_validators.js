@@ -135,7 +135,7 @@ Validator.Function = class Fun extends BaseValidator {
  */
 Validator.Default = class Def extends BaseValidator {
 	exec( value ) {
-		_testValidator = (type, value) => {
+		let _testValidator = (type, value) => {
 			let _val = Validator[ _global.wf.wfUtils.Str.capitalize(type) ];
 			if (!_exists(_val)) {
 				return `'${this.path}' was unable to obtain validator for type '<${type}>'`; }
