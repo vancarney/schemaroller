@@ -23,7 +23,7 @@ class BaseValidator {
 	 * 
 	 */
 	checkType(type, value) {
-		_eval = (type, value)=> {
+		let _eval = (type, value)=> {
 			let _x = (typeof type !== "string") ? _schemaroller_.getClass([type]) : type;
 			if (_x.match(new RegExp(`^${typeof value}$`, "i")) === null) {
 				return `'${this.path}' expected ${type}, type was '<${typeof value}>'`	}

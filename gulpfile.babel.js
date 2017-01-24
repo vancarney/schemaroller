@@ -4,12 +4,14 @@
  * base requirements and config imports
  * 
  ==================== */
+// path
+import path from "path";
 // gulp
-import gulp from 'gulp';
+import gulp from "gulp";
 // list of modules to pakcage for brwser consumotion
-import browserify_manifest from './browserify.json';
+import browserify_manifest from "./browserify.json";
 // NPM package values
-import config from './package.json';
+import config from "./package.json";
 /* ==================
  * 
  * gulp modules
@@ -62,7 +64,6 @@ gulp.task('jshint', () => {
   gulp.src( './lib/*.js' )
 	.pipe( jshint() )
 	.pipe( jshint.reporter( 'default' ) )
-//	.pipe( jshint.reporter( 'fail' ) )
 	.pipe( gulp.dest( './lint.txt' ) );
 });
 /* ==================

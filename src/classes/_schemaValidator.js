@@ -3,11 +3,12 @@
  * @class
  */
 class SchemaValidator {
-	/**
-	 * @constructor
-	 * @param {object} schema
-	 * @param {object} options
-	 */
+    /**
+	 *
+     * @param _schema
+     * @param opts
+     * @returns {*}
+     */
 	constructor(_schema = {}, opts={extensible:false}) {
 		_schemaOptions.set(this, opts);
 		var _errorMsg = null;
@@ -49,10 +50,13 @@ class SchemaValidator {
 	        		_errorMsg = `value for schema element '${_oKey}' was invalid`;	}
 	    	}
 		}
-	/**
-	 *  @param {string} key
-	 *  @param {string} _type
-	 */
+
+    /**
+	 *
+     * @param key
+     * @param _type
+     * @returns {*}
+     */
 	validateTypeString(key, _type) {
 		//- ignores special `default` object key
 		if (key.match(/\.?default+$/)) { 
@@ -72,10 +76,13 @@ class SchemaValidator {
 				return `type '<${_type}>' for schema element '${key}' was invalid`; }	}
 		return true;
 		}
-	/**
-	 * @param {string} key
-	 * @param {object{ params
-	 */
+
+    /**
+	 *
+     * @param key
+     * @param params
+     * @returns {*}
+     */
 	validateUntypedMembers(key, params) {
 		if (Array.isArray(params)) {
 			for (let item of params) {
@@ -101,10 +108,13 @@ class SchemaValidator {
 	      	}
 	    return true;
 	    }
-	/**
-	 * @param {string} key
-	 * @param {object{ params
-	 */
+
+    /**
+	 *
+     * @param key
+     * @param params
+     * @returns {*}
+     */
 	validateSchemaClass(key, params) {
 		if (!_exists( key )) {
 			throw "key was undefined"; }
@@ -127,11 +137,14 @@ class SchemaValidator {
 			return true; }
 		return `value for schema element '${key}' has invalid type '<${params.type}>'`;
 		}
-	/**
-	 * @param {string} key
-	 * @param {string} sKey
-	 * @param {object} params
-	 */
+
+    /**
+	 *
+     * @param key
+     * @param sKey
+     * @param params
+     * @returns {*}
+     */
 	validateSchemaParamString(key, sKey, params) {
 		let _kind = _global.wf.wfUtils.Str.capitalize( params[sKey] );
 		let _schemaKeys = _schemaroller_.schemaRef;
@@ -152,9 +165,15 @@ class SchemaValidator {
 			return eMsg; }
 		return true;
 		}
-	/**
-	 * @param {string} 
-	 */
+
+    /**
+	 *
+     * @param key
+     * @param sKey
+     * @param _schemaKeys
+     * @param params
+     * @returns {*}
+     */
 	validateSchemaParam(key, sKey, _schemaKeys, params) {
     	var _type;
     	// rejects unknown element if schema non-extensible
@@ -231,7 +250,5 @@ class SchemaValidator {
 	    			return `value for schema element '${key}' has invalid class or method '<${_}>'`; }}
 	    	return true;
 	    	}
-	    // should not have gotten here -- so flag it as error
-	    return `unable to process schema element '${key}'`;
 	    }
 }
