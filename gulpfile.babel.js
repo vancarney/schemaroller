@@ -57,15 +57,31 @@ gulp.task('docs',  () => {
 	.pipe(docs('html'))
 	.pipe( gulp.dest('docs') );
 });
+
+/**
+ * JS Linting
+ */
+gulp.task('lint', () => {
+  return gulp.src(['src/**/*.js'])
+    .pipe(eslint())
+    // eslint.format() outputs the lint results to the console.
+    // Alternatively use eslint.formatEach() (see Docs).
+    .pipe(eslint.format())
+    // To have the process exit with an error code (1) on
+    // lint error, return the stream and pipe to failAfterError last.
+    .pipe(eslint.failAfterError());
+});
+
 /* ==================
  * 
- * Testing and Linting
+ * Testing
  * 
  ==================== */
+
 /**
  * runs mocha tests
  */
-gulp.task('test', ['lint'], () => {
+gulp.task('test', ['lint', 'build-tests'], () => {
 	gulp.src('./test/*.js', {read: false})
     // gulp-mocha needs filepaths so you can't have any plugins before it
     .pipe(mocha({reporter: 'spec'}))
@@ -78,20 +94,6 @@ gulp.task('clean-tests', function () {
 //	  return gulp.src(['./test/**/*.js','./test/**/*.*.js'], {read: false})
 //	    .pipe(clean());
 	});
-
-/**
- * JS Linting
- */
-gulp.task('lint', () => {
-  return gulp.src(['src/**/*.js'])
-      .pipe(eslint())
-      // eslint.format() outputs the lint results to the console.
-      // Alternatively use eslint.formatEach() (see Docs).
-      .pipe(eslint.format())
-      // To have the process exit with an error code (1) on
-      // lint error, return the stream and pipe to failAfterError last.
-      .pipe(eslint.failAfterError());
-});
 
 /* ==================
  *
@@ -131,7 +133,7 @@ gulp.task('package', () =>{
  * - builds js sources located in `paths.src`
  * - uses babel to compile to es5
  */
-gulp.task('build', ['clean-js'], () => {
+gulp.task('build', ['clean-js', 'test'], () => {
 	gulp.src(`src/index.js`)
 	.pipe(inject({
 		pattern: '//--\\s*inject:\\s*<filename>'

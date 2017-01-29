@@ -3,9 +3,11 @@
  */
 class Schema {
   /**
+   *
    * @constructor
-   * @param {Object} _o - schema definition object
-   * @param {Object} opts - schema options
+   * @param _signature `JSD` formatted Object
+   * @param opts Schema Options
+   * @returns {string|Schema}
    */
   constructor(_signature, opts = {extensible: false}) {
     var eMsg;
@@ -59,7 +61,7 @@ class Schema {
     _schemaHelpers.get(this).walkSchema(_signature || {}, this.path);
   }
   /**
-   * @returns schema signature object
+   * @returns `JSD` formatted Schema Definition
    */
   get signature() {
     return _schemaSignatures.get(this);
@@ -109,11 +111,11 @@ class Schema {
         }
         _schema = Schema.defaultSignature;
       }
-      // hanldes child objects
+      // handles child objects
       if (typeof value === "object") {
         value = _sH.setChildObject(_key, value);
       } else {
-        // handles absolute vaues (strings, numbers, booleans...)
+        // handles absolute values (strings, numbers, booleans...)
         let eMsg = _sH.validate(_key, value);
         if (typeof eMsg === "string") {
           return eMsg;
@@ -127,8 +129,9 @@ class Schema {
     // returns self for chaining
     return this;
   }
+
   /**
-   * @returns {Boolean(true)|string} returns error string or true
+   * @returns {string|boolean} returns error string or true
    */
   validate() {
     var _path = this.path;

@@ -1,5 +1,5 @@
 import { should, expect } from "chai";
-let {Schema} = require( "./src/schema.js" );
+import {Schema} from "./src/schema.js";
 should();
 
 describe("Schema Class Test Suite", function() {
@@ -112,7 +112,7 @@ describe("Schema Class Test Suite", function() {
 		  });
 	});
 	
-	describe("Polymorphism", function() {
+	describe.only("Polymorphism", function() {
 		it("should initialize from polymorphic schema fixture", () => {
 			let _s = require("./fixtures/polymorphic.schema.json");
 			this.schema = new Schema(_s);
@@ -120,34 +120,26 @@ describe("Schema Class Test Suite", function() {
 		});
 	
 	    
-		it("should check for polymorphic properties", () => {
-			let _d = {
-				badParam: false//,
-	
-	//			objType1: {
-	//				id: 0,
-	//				name: "myName",
-	//				desc: "some text"
-	//			},
-	//			objType2: {
-	//				id: 0,
-	//				active: true
-	//			},
-			}
-	//    
-			expect(this.schema.set(_d)).to.eq(
-	    		"badParam expected value of type 'Object'. Type was '<boolean>'");
-	//	_d.badParam = 1;
-	//    expect(this.schema.set(_d)).to.eq(
-	//    		"'badParam' expected Object, type was '<number>'");
-		_d.badParam = {
-			id: "0",
-			name: "myName",
-			desc: "sometext"//,
-	//		bad: "bad"
-		}
-		console.log(`res: ${this.schema.set(_d)}`);
-		expect(this.schema.set(_d) instanceof Schema).to.be.true;
+		it("should validate polymorphic properties", ()=>{
+			"use strict";
+      let _d = {
+        badParam: false,
+      };
+      let _err = "badParam expected value of type 'Object'. " +
+				"Type was '<boolean>'";
+      expect(this.schema.set(_d)).to.eq(_err);
+    });
+		it("should pass valid Polymorphic Property", ()=>{
+			"use strict";
+      let _d = {
+        badParam: {
+          id: "0",
+          name: "myName",
+          desc: "sometext",
+        }
+      };
+      expect(this.schema.set(_d) instanceof Schema).to.be.true;
+      this.schema.toJSON().badParam.name.should.eq("myName");
 		});
 	});
 	describe("Client Collection", function() {
