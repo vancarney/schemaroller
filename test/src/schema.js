@@ -24,7 +24,7 @@ var _schemaKeys = new WeakMap();
 var _schemaOptions = new WeakMap();
 var _schemaHelpers = new WeakMap();
 var _schemaSignatures = new WeakMap();
-var _required_elements = new WeakMap();
+var _requiredElements = new WeakMap();
 var _validators = new WeakMap();
 /**
  * @private
@@ -374,7 +374,7 @@ var Schema = function () {
 		_object.set(this, {});
 		_schemaOptions.set(this, opts);
 		_validators.set(this, {});
-		_required_elements.set(this, []);
+		_requiredElements.set(this, []);
 		if (_exists(_signature.polymorphic)) {
 			_signature = _signature.polymorphic;
 		}
@@ -395,7 +395,7 @@ var Schema = function () {
 				var _req = _signature[_sigEl].required;
 				if (_req) {
 					// -- adds required element to list
-					_required_elements.get(this).push(_sigEl);
+					_requiredElements.get(this).push(_sigEl);
 				}
 			}
 			// tests for metadata
@@ -426,9 +426,9 @@ var Schema = function () {
 			_mdRef.set(this, _);
 		}
 		// attempts to validate provided `schema` entries
-		var _schema_validator = new SchemaValidator(_signature, this.options);
+		var _schemaValidator = new SchemaValidator(_signature, this.options);
 		// throws error if error messagereturned
-		if (typeof (eMsg = _schema_validator.isValid()) === 'string') {
+		if (typeof (eMsg = _schemaValidator.isValid()) === 'string') {
 			throw eMsg;
 		}
 		_schemaSignatures.set(this, _signature);
@@ -678,7 +678,7 @@ var Schema = function () {
 	}, {
 		key: 'requiredFields',
 		get: function get() {
-			return _required_elements.get(this);
+			return _requiredElements.get(this);
 		}
 		/**
    * indicates if Schema will accept arbitrary keys

@@ -140,14 +140,14 @@ describe("Schema Class Test Suite", function() {
 	//	_d.badParam = 1;
 	//    expect(this.schema.set(_d)).to.eq(
 	//    		"'badParam' expected Object, type was '<number>'");
-	//	_d.badParam = {
-	//		id: "0",
-	//		name: "myName",
-	//		desc: "sometext"//,
-	////		bad: "bad"
-	//	}
-	//	console.log(`res: ${this.schema.set(_d)}`);
-	//	expect(this.schema.set(_d) instanceof Schema).to.be.true;
+		_d.badParam = {
+			id: "0",
+			name: "myName",
+			desc: "sometext"//,
+	//		bad: "bad"
+		}
+		console.log(`res: ${this.schema.set(_d)}`);
+		expect(this.schema.set(_d) instanceof Schema).to.be.true;
 		});
 	});
 	describe("Client Collection", function() {

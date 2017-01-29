@@ -1,0 +1,46 @@
+{
+  "extends": "loopback",
+  "parserOptions": {
+        "ecmaVersion": 6,
+        "sourceType": "module",
+        "ecmaFeatures": {
+            "jsx": false
+        }
+  },
+  "globals": {
+    "_exists": true,
+    "_global": true,
+    "_kinds": true,
+    "_mdRef": true,
+    "_metaData": true,
+    "_object": true,
+    "_requiredElements": true,
+    "_schemaHelpers": true,
+    "_schemaOptions": true,
+    "_schemaroller_": true,
+    "_schemaSignatures": true,
+    "_schemaValidator": true,
+    "_validate": true,
+    "_validators": true,
+    "_vectorTypes": true,
+    "_walkSchema": true,
+    "Schema": true,
+    "SchemaHelpers": true,
+    "SchemaRoller": true,
+    "SchemaValidator": true,
+    "Validator": true,
+    "Vector": true,
+    "ValidatorBuilder": true,
+    "window": true,
+    "wf": true
+  },
+  "rules": {
+    "quotes": ["error", "double"],
+    "spaced-comment": ["error", "always", { "markers": ["--"] }],
+    "max-len": ["error", 90, 4, {
+      "ignoreComments": true,
+      "ignoreUrls": true,
+      "ignorePattern": "^\\s*var\\s.+=\\s*(require\\s*\\()|(/)"
+    }]
+  }
+}

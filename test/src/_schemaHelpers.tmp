@@ -10,7 +10,7 @@ let _schemaKeys = new WeakMap();
 let _schemaOptions = new WeakMap();
 let _schemaSignatures = new WeakMap();
 let _schemaHelpers = new WeakMap();
-let _required_elements = new WeakMap();
+let _requiredElements = new WeakMap();
 let _validators = new WeakMap();
 //-- inject:../../src/classes/_metaData.js
 //-- inject:../../src/classes/SchemaRoller.js
