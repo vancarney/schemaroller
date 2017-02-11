@@ -1,0 +1,46 @@
+{
+  "name": {
+    "type": "String",
+    "required": true,
+    "restrict": "^[a-zA-Z-0-9_]+$"
+  },
+  "description": {
+    "type": "String",
+    "required": false,
+    "default": "Add description here",
+    "restrict": "^((?!\"|\b|\\f|\\n|\\r|\\t|\\u).)*$"
+  },
+  "plural": {
+    "type": "String",
+    "required": false,
+    "restrict": "^[a-zA-Z-0-9_]+$"
+  },
+  "base": {
+    "type": "String",
+    "required": false,
+    "restrict": "^[a-zA-Z-0-9_]+$"
+  },
+  "http": {
+    "type": "Object",
+    "required": false,
+    "elements": {
+      "path": {
+        "type": "String",
+        "required": true
+      }
+    }
+  },
+  "strict": {
+    "required": false,
+    "default": false,
+    "polymorphic": [
+      {
+        "type": "Boolean"
+      },
+      {
+        "type": "String",
+        "restrict": "^(throw|validate)+$"
+      }
+    ]
+  }
+}

@@ -22,4 +22,4 @@ let _validators = new WeakMap();
 const _schemaroller_ = new SchemaRoller();
 //-- inject:../../src/classes/_schemaHelpers.js
 ;
-export {Schema};
+export {Schema, ValidatorBuilder};

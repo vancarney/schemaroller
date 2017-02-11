@@ -11,8 +11,11 @@ class SchemaHelpers {
     }
     this._ref = _ref;
   }
+
   /**
    *
+   * @param obj
+   * @returns {*}
    */
   setObject(obj) {
     obj = this.ensureRequiredFields(obj);
@@ -28,12 +31,16 @@ class SchemaHelpers {
     }
     return this._ref;
   }
+
   /**
    *
+   * @param key
+   * @param value
+   * @returns {*}
    */
   setChildObject(key, value) {
     let _mdData = {
-      _path: key, // `${this._ref.path}.${key}`,
+      _path: key, // this._ref.path.length > 0 ? `${this._ref.path}.${key}` : key,
       _root: this._ref.root,
     };
     let _s = this.createSchemaChild(key, value, this._ref.options, _mdData);
@@ -41,6 +48,42 @@ class SchemaHelpers {
       return `"${key}" was invalid`;
     }
     return _s[(_s instanceof Vector) ? "replaceAll" : "set"](value);
+  }
+
+  /**
+   *
+   * @param key
+   * @param value
+   * @param opts
+   * @param metaData
+   * @returns {*}
+   */
+  createSchemaChild(key, value, opts, metaData) {
+    var _kinds;
+    // tests if value is not Array
+    if (!Array.isArray(value)) {
+      let _md = new _metaData(this._ref, metaData ||
+        {
+          _path: key,
+          _root: this._ref.root,
+        });
+      var _schemaDef = this._ref.signature[key] ||
+        this._ref.signature["*"] ||
+        this._ref.signature;
+      // if (_schemaDef.hasOwnProperty("polymorphic")) {
+      //   _schemaDef = _schemaDef.polymorphic;
+      // }
+      return new Schema(_schemaDef, opts, _md);
+    } else {
+      _kinds = this.getKinds(this._ref.signature[key] || this._ref.signature);
+      if (Array.isArray(_kinds)) {
+        _kinds = _kinds.map(this.ensureKindIsString(value));
+        _kinds = _kinds.filter(itm=> itm !== null);
+        _kinds = _kinds.length ? _kinds : "*";
+        return new Vector((_kinds || "*"), metaData);
+      }
+    }
+    return "unable to process value";
   }
 
   /**
@@ -81,64 +124,12 @@ class SchemaHelpers {
     }
     return obj;
   }
-  /**
-   * @param {Object} value
-   * @param {_metaData} metaData
-   */
-  createSchemaChild(key, value, opts, metaData) {
-    var _kinds;
-    // tests if value is not Array
-    if (!Array.isArray(value)) {
-      let _md = new _metaData(this._ref, metaData || {
-        _path: key, // `${this._ref.path}.${key}`,
-        _root: this._ref.root,
-      });
-      let _schemaDef = this._ref.signature ||
-        this._ref.signature["*"] ||
-        this._ref.signature[key];
-      return new Schema(_schemaDef, opts, _md);
-    } else {
-      _kinds = this.getKinds(this._ref.signature[key] || this._ref.signature);
-      if (Array.isArray(_kinds)) {
-        _kinds = _kinds.map(this.ensureKindIsString(value));
-        _kinds = _kinds.filter(itm=> itm !== null);
-        _kinds = _kinds.length ? _kinds : "*";
-        return new Vector((_kinds || "*"), metaData);
-      }
-    }
-    return "unable to process value";
-  }
 
   /**
-   * builds validations from SCHEMA ENTRIES
-   * @private
-   */
-  walkSchema(obj, path) {
-    let result = [];
-    let _map = function(itm, objPath) {
-      return _walkSchema(itm, objPath);
-    };
-    let _elements = Array.isArray(obj) ? obj : Object.keys(obj);
-    for (let _i in _elements) {
-      let _k = _elements[_i];
-      let itm;
-      let objPath = _exists(path) ? (path.length ? `${path}.${_k}` : _k) : _k || "";
-      ValidatorBuilder.getInstance().create(obj[_k], objPath);
-      // tests for nested elements
-      if (_exists(obj[_k]) && typeof obj[_k].elements === "object") {
-        if (!Array.isArray(obj[_k].elements)) {
-          let _ = this.walkSchema(obj[_k].elements, objPath);
-          result.push(_);
-        } else {
-          let _ = _map(obj[_k].elements, objPath);
-          result.push(_);
-        }
-      }
-    }
-    return result;
-  }
-  /**
-   * @private
+   *
+   * @param _schema
+   * @param opts
+   * @returns {*}
    */
   objHelper(_schema, opts) {
     var _kinds = this.getKinds(_schema);
@@ -195,6 +186,7 @@ class SchemaHelpers {
       }
       ValidatorBuilder.getInstance().set(key, _ref);
     }
+    console.log(`validate ['${this._ref.path}']: ${JSON.stringify(value)}`);
     msg = ValidatorBuilder.getInstance().exec(key, value);
     if (typeof msg === "string") {
       return msg;
@@ -203,7 +195,9 @@ class SchemaHelpers {
   }
 
   /**
-   * @returns {array} list of types declared by object
+   *
+   * @param _s
+   * @returns {array} list of types declared by object}
    */
   getKinds(_s) {
     var _elems = Object.keys(_s).map(key=> {
@@ -214,5 +208,43 @@ class SchemaHelpers {
     });
     _elems = _elems.filter(elem=> elem !== null);
     return _elems.length ? _elems : null;
+  }
+
+  /**
+   * builds validations from SCHEMA ENTRIES
+   * @private
+   */
+  static walkSchema(obj, path) {
+    if (Array.isArray(obj)) {
+      path = path.replace(/\.\\\\:poly/, "");
+      path = path.length ? `${path}.*` : "*";
+      ValidatorBuilder.getInstance().create(obj, path);
+      return;
+    }
+
+    let _elements = Object.keys(obj);
+
+    for (let _i in _elements) {
+      let _k = _elements[_i];
+      let objPath = path || "";
+
+      objPath = objPath.replace(/\\\\:poly/, "*");
+
+      if (objPath.match(/\.?\\\\:elem+$/)) {
+        objPath = objPath.replace(/\\\\:elem/, _k || "");
+      } else {
+        objPath = path.length ? `${path}.${_k}` : _k;
+      }
+      ValidatorBuilder.getInstance().create(obj[_k], objPath);
+      // tests for nested elements
+      if (_exists(obj[_k])) {
+        if (obj[_k].hasOwnProperty("elements")) {
+          SchemaHelpers.walkSchema(obj[_k].elements, `${objPath}.\\\\:elem`);
+        }
+        if (obj[_k].hasOwnProperty("polymorphic")) {
+          SchemaHelpers.walkSchema(obj[_k].polymorphic, `${objPath}.\\\\:poly`);
+        }
+      }
+    }
   }
 }

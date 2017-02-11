@@ -6,6 +6,7 @@
 class SchemaRoller {
   constructor() {
     _kinds.set(this, {
+      "*": "*",
       "Array": Array,
       "ArrayBuffer": ArrayBuffer,
       "Boolean": Boolean,
@@ -17,6 +18,7 @@ class SchemaRoller {
       "Function": Function,
     });
   }
+
   /**
    * @param {string|function} classesOrNames
    * @returns {function}

@@ -4,7 +4,9 @@
 //
 
 // references the global scope of our environment
-const _global = (typeof exports !== "undefined") && (exports !== null) ? exports : window;
+const _global = (typeof exports !== "undefined") && (exports !== null) ?
+  exports :
+  window;
 /**
  * @private
  */

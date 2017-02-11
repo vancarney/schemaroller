@@ -1,0 +1,12 @@
+{
+  "param": {
+    "required": false,
+    "default": false,
+    "polymorphic": [{
+      "type": "Boolean"
+    }, {
+      "type": "String",
+      "restrict": "^[a-z0-9\\s\\.\\-_]+$"
+    }]
+  }
+}

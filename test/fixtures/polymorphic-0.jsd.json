@@ -1,0 +1,24 @@
+{
+  "name": {
+    "type": "String",
+    "required": true,
+    "restrict": "^[a-zA-Z0-9_\\-\\s]+$"
+  },
+  "schema": {
+    "required": true,
+    "polymorphic": [
+      {
+        "type": "String",
+        "restrict": "^[a-zA-Z0-9_\\s\\-\\/\\.\\\\]+$"
+      },
+      {
+        "type": "Object",
+        "elements": {
+          "*": {
+            "type": "*"
+          }
+        }
+      }
+    ]
+  }
+}

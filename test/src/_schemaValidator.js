@@ -27,6 +27,7 @@ var SchemaRoller = function () {
     _classCallCheck(this, SchemaRoller);
 
     _kinds.set(this, {
+      "*": "*",
       "Array": Array,
       "ArrayBuffer": ArrayBuffer,
       "Boolean": Boolean,
@@ -38,6 +39,7 @@ var SchemaRoller = function () {
       "Function": Function
     });
   }
+
   /**
    * @param {string|function} classesOrNames
    * @returns {function}
@@ -265,6 +267,12 @@ var SchemaValidator = function () {
    * @param opts
    * @returns {*}
    */
+  /**
+   *
+   * @param _schema
+   * @param opts
+   * @returns {string}
+   */
   function SchemaValidator() {
     var _schema = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
@@ -278,7 +286,7 @@ var SchemaValidator = function () {
       return _errorMsg || true;
     };
     // validates SCHEMA ENTRIES
-    var _iterate = Array.isArray(_schema) ? _schema : Object.keys(_schema);
+    var _iterate = Array.isArray(_schema) ? _schema.keys() : Object.keys(_schema);
     var _iteratorNormalCompletion3 = true;
     var _didIteratorError3 = false;
     var _iteratorError3 = undefined;
@@ -458,16 +466,17 @@ var SchemaValidator = function () {
           }
         }
       } else {
-        var _p = void 0,
-            keyPath = void 0;
-        if ((_p = (keyPath = key.split(".")).pop()) !== "elements") {
+        var keyPath = key.split(".");
+        var _p = keyPath.pop();
+        if (_p !== "elements") {
           if (_p === "default") {
             return true;
           }
           if (params.hasOwnProperty("polymorphic")) {
             return this.validateSchemaEntry(key, params.polymorphic);
           }
-          return 'value for schema element \'' + key + '\' was malformed. \n          Property \'type\' was missing';
+          var _e = "value for schema element " + "'" + key + "' was malformed. Property 'type' was missing";
+          return _e;
         } else {
           var _iteratorNormalCompletion7 = true;
           var _didIteratorError7 = false;
@@ -605,7 +614,7 @@ var SchemaValidator = function () {
       if (_typeof(_schemaKeys[sKey]) === "object") {
         // handles `elements` object
         if (sKey === "elements") {
-          var _iterate2 = Array.isArray(params.elements) ? params.elements : Object.keys(params.elements);
+          var _iterate2 = Array.isArray(params.elements) ? params.elements.keys() : Object.keys(params.elements);
           var _iteratorNormalCompletion8 = true;
           var _didIteratorError8 = false;
           var _iteratorError8 = undefined;

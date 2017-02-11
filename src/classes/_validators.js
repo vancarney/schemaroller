@@ -39,7 +39,14 @@ class BaseValidator {
       let _x = (typeof type !== "string") ?
         _schemaroller_.getClass([type]) :
         type;
-      let _rx = new RegExp(`^${typeof value}$`, "i");
+      let _rx = new RegExp(`^(${typeof value})+$`, "i");
+      if (type === "array") {
+        if (!Array.isArray((value))) {
+          return `'${this.path}' expected ${type}, type was '<${typeof value}>'`;
+        }
+        return true;
+      }
+
       if (_x.match(_rx) === null) {
         return `'${this.path}' expected ${type}, type was '<${typeof value}>'`;
       }
@@ -51,7 +58,7 @@ class BaseValidator {
         let k;
         for (k in type) {
           if (typeof (_ = _eval(type[k], value)) === "boolean") {
-            return _;
+            return true;
           }
         }
         return _;
@@ -73,16 +80,42 @@ class BaseValidator {
   }
 };
 
+Validator.Array = class Arr extends BaseValidator {
+  exec(value) {
+    // let _iterate = (key, _val)=>{
+    //   let _p = `${this.path}.${key}`;
+    //   let _v = ValidatorBuilder.getValidators();
+    //   if (!_v.hasOwnProperty(_p)) {
+    //     let _el = this.signature.elements[key] ||
+    //       this.signature.elements["*"];
+    //     ValidatorBuilder.create(_el, _p);
+    //   }
+    //   let _ = this.call(_p, _val);
+    //   if (typeof _ === "string") {
+    //     return _;
+    //   }
+    // };
+    let _ = this.checkType("array", value);
+    if (typeof _ !== "boolean") {
+      return _;
+    }
+    return true;
+  }
+};
+
 /**
  * @private
  */
 Validator.Object = class Obj extends BaseValidator {
   exec(value) {
+    console.log(`exec ${this.path}`);
     let _iterate = (key, _val)=>{
       let _p = `${this.path}.${key}`;
       let _v = ValidatorBuilder.getValidators();
       if (!_v.hasOwnProperty(_p)) {
-        ValidatorBuilder.create(this.signature.elements[key], _p);
+        let _el = this.signature.elements[key] ||
+          this.signature.elements["*"];
+        ValidatorBuilder.create(_el, _p);
       }
       let _ = this.call(_p, _val);
       if (typeof _ === "string") {
@@ -99,6 +132,7 @@ Validator.Object = class Obj extends BaseValidator {
         }
       } else {
         for (let _ in value) {
+          console.log(`exec ${this.path}`);
           let e = this.call(this.path, value[_]);
           if (typeof e === "string") {
             return e;
@@ -128,15 +162,18 @@ Validator.Boolean = class Bool extends BaseValidator {
  */
 Validator.String = class Str extends BaseValidator {
   exec(value) {
-    let _;
-    if (typeof (_ = this.checkType("string", value)) === "string") {
-      return _;
-    }
+    let _ = this.checkType("string", value);
+
     if (_exists(this.signature.restrict)) {
       if (!_exists(new RegExp(this.signature.restrict).exec(value))) {
         return `value '${value}' for ${this.path} did not match required expression`;
       }
     }
+
+    if ((typeof _).match(/^(boolean|string)+$/) !== null) {
+      return _;
+    }
+
     return true;
   }
 };
@@ -185,6 +222,9 @@ Validator.Default = class Def extends BaseValidator {
     var _x = typeof this.signature.type === "string" ?
 			_schemaroller_.getClass(this.signature.type) :
 			this.signature.type;
+    if (_x === "*") {
+      return true;
+    }
     let _tR = this.checkType(_x, value);
     if (typeof _tR === "string") {
       return _tR;

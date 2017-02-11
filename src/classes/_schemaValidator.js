@@ -10,12 +10,18 @@ class SchemaValidator {
    * @param opts
    * @returns {*}
    */
+  /**
+   *
+   * @param _schema
+   * @param opts
+   * @returns {string}
+   */
   constructor(_schema = {}, opts = {extensible: false}) {
     _schemaOptions.set(this, opts);
     var _errorMsg = null;
     this.isValid = () => _errorMsg || true;
     // validates SCHEMA ENTRIES
-    let _iterate = Array.isArray(_schema) ? _schema : Object.keys(_schema);
+    let _iterate = Array.isArray(_schema) ? _schema.keys() : Object.keys(_schema);
     for (let _oKey of _iterate) {
       switch (typeof _schema[_oKey]) {
         case "string":
@@ -104,16 +110,18 @@ class SchemaValidator {
         }
       }
     } else {
-      let _p, keyPath;
-      if ((_p = (keyPath = key.split(".")).pop()) !== "elements") {
+      let keyPath = key.split(".");
+      let _p = keyPath.pop();
+      if (_p !== "elements") {
         if (_p === "default") {
           return true;
         }
         if (params.hasOwnProperty("polymorphic")) {
           return this.validateSchemaEntry(key, params.polymorphic);
         }
-        return `value for schema element '${key}' was malformed. 
-          Property 'type' was missing`;
+        let _e = "value for schema element " +
+          "'" + key + "' was malformed. Property 'type' was missing";
+        return _e;
       } else {
         for (let param of Object.keys(params)) {
           let _keys = [].concat(keyPath).concat(param);
@@ -222,7 +230,7 @@ class SchemaValidator {
       // handles `elements` object
       if (sKey === "elements") {
         let _iterate = Array.isArray(params.elements) ?
-          params.elements :
+          params.elements.keys() :
           Object.keys(params.elements);
         for (let xKey of _iterate) {
           let eMsg = this.validateSchemaEntry(`${key}.${xKey}`, params.elements[xKey]);

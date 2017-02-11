@@ -18,12 +18,14 @@ class Schema {
     _schemaOptions.set(this, opts);
     _validators.set(this, {});
     _requiredElements.set(this, []);
-    if (_exists(_signature.polymorphic)) {
-      _signature = _signature.polymorphic;
-    }
+
     // traverses elements of schema checking for elements marked as reqiured
-    if (_exists(_signature.elements)) {
+    if (_signature.hasOwnProperty("elements")) {
       _signature = _signature.elements;
+    }
+
+    if (_signature.hasOwnProperty("polymorphic")) {
+      _signature = _signature.polymorphic;
     }
 
     for (let _sigEl of Object.keys(_signature)) {
@@ -58,7 +60,7 @@ class Schema {
     }
     _schemaSignatures.set(this, _signature);
     _schemaHelpers.set(this, new SchemaHelpers(this));
-    _schemaHelpers.get(this).walkSchema(_signature || {}, this.path);
+    SchemaHelpers.walkSchema(_signature || {}, this.path);
   }
   /**
    * @returns `JSD` formatted Schema Definition
@@ -84,50 +86,75 @@ class Schema {
     if (typeof key === "object") {
       return _sH.setObject(key);
     }
-    let _childSigs  = this.signature.elements || this.signature;
+    let _setIfValid = (_k, _v)=> {
+      let eMsg = _sH.validate(_k, _v);
+      if (typeof eMsg === "string") {
+        return eMsg;
+      }
+      // applies value to schema
+      let _o = _object.get(this);
+      _o[key] = _v;
+      _object.set(this, _o);
+      return this;
+    };
+    let _childSigs  = this.signature.elements ||
+      this.signature.polymorphic ||
+      this.signature;
     let _pathKeys = key.split(".");
-    for (let _ in _pathKeys) {
-      let k = _pathKeys[_];
-      let _schema;
-      let _key = this.path.length > 0 ? `${this.path}.${k}` : k;
-      if (_exists(_childSigs[k])) {
-        _schema = _childSigs[k];
-      } else {
+    if (_exists(_childSigs[key])) {
+      // _schema = _childSigs[k];
+      return _setIfValid(key, value);
+    } else if (Array.isArray(_childSigs)) {
+      let _key = this.path.length ? `${this.path}.${key}` : key;
+      if (ValidatorBuilder.getInstance().list().indexOf(_key) < 0) {
+        ValidatorBuilder.create(_childSigs, _key);
+      }
+      // handles absolute values (strings, numbers, booleans...)
+      let eMsg = _sH.validate(_key, value);
+      if (typeof eMsg === "string") {
+        return eMsg;
+      }
+    } else {
+      for (let _ in _pathKeys) {
+        let k = _pathKeys[_];
+        let _schema;
+        let _key = this.path.length > 0 ? `${this.path}.${k}` : k;
+
         // attempts to find wildcard element name
         if (_exists(_childSigs["*"])) {
           // applies schema
-          _schema = _childSigs["*"].polymorphic || _childSigs["*"];
+          _schema = _childSigs["*"]; // .polymorphic || _childSigs["*"];
           // derives path for wildcard element
           let _pKey = this.path.length > 1 ? `${this.path}.${key}` : key;
           // creates Validator for path
           ValidatorBuilder.getInstance().create(_schema, _pKey);
+        } else if (Array.isArray(_childSigs)) {
+          let _v = ValidatorBuilder.getInstance();
+          let _ = _v.create(_schema = _childSigs, `${this.path}.${key}`);
         }
-      }
-      // handles missing schema signatures
-      if (!_exists(_schema)) {
-        // rejects non-members of non-extensible schemas
-        if (!this.isExtensible) {
-          return `element '${_key}' is not a valid element`;
+
+        // handles missing schema signatures
+        if (!_exists(_schema)) {
+          // rejects non-members of non-extensible schemas
+          if (!this.isExtensible) {
+            return `element '${_key}' is not a valid element`;
+          }
+          _schema = Schema.defaultSignature;
         }
-        _schema = Schema.defaultSignature;
-      }
-      // handles child objects
-      if (typeof value === "object") {
-        value = _sH.setChildObject(_key, value);
-      } else {
+        // handles child objects
+        if (typeof value === "object") {
+          value = _sH.setChildObject(_key, value);
+        }
         // handles absolute values (strings, numbers, booleans...)
-        let eMsg = _sH.validate(_key, value);
-        if (typeof eMsg === "string") {
-          return eMsg;
-        }
+        return _setIfValid(_key, value);
       }
-      // applies value to schema
-      let _o = _object.get(this);
-      _o[key] = value;
-      _object.set(this, _o);
+    }
+    if (typeof value === "undefined") {
+      return `value for ${key} was undefined`;
     }
     // returns self for chaining
-    return this;
+    let _k = this.path.length ? `${this.path}.${key}` : key;
+    return _setIfValid(_k, value);
   }
 
   /**

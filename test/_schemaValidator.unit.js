@@ -1,6 +1,7 @@
 import { should, expect } from "chai";
 import {SchemaValidator} from "./src/_schemaValidator.js";
 should();
+"use strict";
 
 describe( "SchemaValidator Unit Test Suite", ()=> {
 	var validator = new SchemaValidator();
@@ -91,6 +92,15 @@ describe( "SchemaValidator Unit Test Suite", ()=> {
 			// this has invalid `type` 'Non-Type' and must fail
 			expect( validator.validateUntypedMembers("key", [{type:"String"},{type:"Non-Type"}] ) ).to.equal( 
 					"value for schema element 'key' has invalid type '<Non-Type>'" );
+		})
+		it("should test for polymorphic", ()=> {
+			let _ = {
+				polymorphic: [{
+					type: "String",
+				}, {
+					type: "Boolean",
+				},],
+			};
 		})
 	});
 	describe( "Schema Type Validation", ()=> {

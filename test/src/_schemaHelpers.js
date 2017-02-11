@@ -43,7 +43,7 @@ var _metaData = function () {
 
     var _cName = _global.wf.wfUtils.Fun.getConstructorName(_oRef);
     if (!(_oRef instanceof Schema || _oRef instanceof Vector)) {
-      throw 'new _metaData() argument 1 requires subclass Schema or Vector. \n            Was subclass of \'<' + _cName + '>\'';
+      throw 'new _metaData() requires Schema or Vector. Was \'<' + _cName + '>\'';
     }
     if (this._createID == null) {
       (function () {
@@ -56,7 +56,7 @@ var _metaData = function () {
         };
       })();
     }
-    _data = Object.assign(_data, {
+    _data = Object.assign({}, _data, {
       _id: this._createID(),
       _className: _cName,
       _created: Date.now()
@@ -147,6 +147,7 @@ var SchemaRoller = function () {
     _classCallCheck(this, SchemaRoller);
 
     _kinds.set(this, {
+      "*": "*",
       "Array": Array,
       "ArrayBuffer": ArrayBuffer,
       "Boolean": Boolean,
@@ -158,6 +159,7 @@ var SchemaRoller = function () {
       "Function": Function
     });
   }
+
   /**
    * @param {string|function} classesOrNames
    * @returns {function}
@@ -396,12 +398,14 @@ var Schema = function () {
     _schemaOptions.set(this, opts);
     _validators.set(this, {});
     _requiredElements.set(this, []);
-    if (_exists(_signature.polymorphic)) {
-      _signature = _signature.polymorphic;
-    }
+
     // traverses elements of schema checking for elements marked as reqiured
-    if (_exists(_signature.elements)) {
+    if (_signature.hasOwnProperty("elements")) {
       _signature = _signature.elements;
+    }
+
+    if (_signature.hasOwnProperty("polymorphic")) {
+      _signature = _signature.polymorphic;
     }
 
     var _iteratorNormalCompletion3 = true;
@@ -456,7 +460,7 @@ var Schema = function () {
     }
     _schemaSignatures.set(this, _signature);
     _schemaHelpers.set(this, new SchemaHelpers(this));
-    _schemaHelpers.get(this).walkSchema(_signature || {}, this.path);
+    SchemaHelpers.walkSchema(_signature || {}, this.path);
   }
   /**
    * @returns `JSD` formatted Schema Definition
@@ -483,54 +487,79 @@ var Schema = function () {
   }, {
     key: 'set',
     value: function set(key, value) {
+      var _this = this;
+
       var _sH = _schemaHelpers.get(this);
       if ((typeof key === 'undefined' ? 'undefined' : _typeof2(key)) === "object") {
         return _sH.setObject(key);
       }
-      var _childSigs = this.signature.elements || this.signature;
+      var _setIfValid = function _setIfValid(_k, _v) {
+        var eMsg = _sH.validate(_k, _v);
+        if (typeof eMsg === "string") {
+          return eMsg;
+        }
+        // applies value to schema
+        var _o = _object.get(_this);
+        _o[key] = _v;
+        _object.set(_this, _o);
+        return _this;
+      };
+      var _childSigs = this.signature.elements || this.signature.polymorphic || this.signature;
       var _pathKeys = key.split(".");
-      for (var _ in _pathKeys) {
-        var k = _pathKeys[_];
-        var _schema = void 0;
-        var _key = this.path.length > 0 ? this.path + '.' + k : k;
-        if (_exists(_childSigs[k])) {
-          _schema = _childSigs[k];
-        } else {
+      if (_exists(_childSigs[key])) {
+        // _schema = _childSigs[k];
+        return _setIfValid(key, value);
+      } else if (Array.isArray(_childSigs)) {
+        var _key = this.path.length ? this.path + '.' + key : key;
+        if (ValidatorBuilder.getInstance().list().indexOf(_key) < 0) {
+          ValidatorBuilder.create(_childSigs, _key);
+        }
+        // handles absolute values (strings, numbers, booleans...)
+        var eMsg = _sH.validate(_key, value);
+        if (typeof eMsg === "string") {
+          return eMsg;
+        }
+      } else {
+        for (var _ in _pathKeys) {
+          var k = _pathKeys[_];
+          var _schema = void 0;
+          var _key2 = this.path.length > 0 ? this.path + '.' + k : k;
+
           // attempts to find wildcard element name
           if (_exists(_childSigs["*"])) {
             // applies schema
-            _schema = _childSigs["*"].polymorphic || _childSigs["*"];
+            _schema = _childSigs["*"]; // .polymorphic || _childSigs["*"];
             // derives path for wildcard element
             var _pKey = this.path.length > 1 ? this.path + '.' + key : key;
             // creates Validator for path
             ValidatorBuilder.getInstance().create(_schema, _pKey);
+          } else if (Array.isArray(_childSigs)) {
+            var _v = ValidatorBuilder.getInstance();
+            var _2 = _v.create(_schema = _childSigs, this.path + '.' + key);
           }
-        }
-        // handles missing schema signatures
-        if (!_exists(_schema)) {
-          // rejects non-members of non-extensible schemas
-          if (!this.isExtensible) {
-            return 'element \'' + _key + '\' is not a valid element';
+
+          // handles missing schema signatures
+          if (!_exists(_schema)) {
+            // rejects non-members of non-extensible schemas
+            if (!this.isExtensible) {
+              return 'element \'' + _key2 + '\' is not a valid element';
+            }
+            _schema = Schema.defaultSignature;
           }
-          _schema = Schema.defaultSignature;
-        }
-        // handles child objects
-        if ((typeof value === 'undefined' ? 'undefined' : _typeof2(value)) === "object") {
-          value = _sH.setChildObject(_key, value);
-        } else {
+          // handles child objects
+          if ((typeof value === 'undefined' ? 'undefined' : _typeof2(value)) === "object") {
+            value = _sH.setChildObject(_key2, value);
+          }
           // handles absolute values (strings, numbers, booleans...)
-          var eMsg = _sH.validate(_key, value);
-          if (typeof eMsg === "string") {
-            return eMsg;
-          }
+          return _setIfValid(_key2, value);
         }
-        // applies value to schema
-        var _o = _object.get(this);
-        _o[key] = value;
-        _object.set(this, _o);
+      }
+      if (typeof value === "undefined") {
+        return 'value for ' + key + ' was undefined';
       }
       // returns self for chaining
-      return this;
+      var _k = this.path.length ? this.path + '.' + key : key;
+      return _setIfValid(_k, value);
     }
 
     /**
@@ -800,13 +829,20 @@ var BaseValidator = function () {
   }, {
     key: 'checkType',
     value: function checkType(type, value) {
-      var _this = this;
+      var _this2 = this;
 
       var _eval = function _eval(type, value) {
         var _x = typeof type !== "string" ? _schemaroller_.getClass([type]) : type;
-        var _rx = new RegExp('^' + (typeof value === 'undefined' ? 'undefined' : _typeof2(value)) + '$', "i");
+        var _rx = new RegExp('^(' + (typeof value === 'undefined' ? 'undefined' : _typeof2(value)) + ')+$', "i");
+        if (type === "array") {
+          if (!Array.isArray(value)) {
+            return '\'' + _this2.path + '\' expected ' + type + ', type was \'<' + (typeof value === 'undefined' ? 'undefined' : _typeof2(value)) + '>\'';
+          }
+          return true;
+        }
+
         if (_x.match(_rx) === null) {
-          return '\'' + _this.path + '\' expected ' + type + ', type was \'<' + (typeof value === 'undefined' ? 'undefined' : _typeof2(value)) + '>\'';
+          return '\'' + _this2.path + '\' expected ' + type + ', type was \'<' + (typeof value === 'undefined' ? 'undefined' : _typeof2(value)) + '>\'';
         }
         return true;
       };
@@ -816,7 +852,7 @@ var BaseValidator = function () {
           var k = void 0;
           for (k in type) {
             if (typeof (_ = _eval(type[k], value)) === "boolean") {
-              return _;
+              return true;
             }
           }
           return _;
@@ -846,11 +882,47 @@ var BaseValidator = function () {
 
 ;
 
+Validator.Array = function (_BaseValidator) {
+  _inherits(Arr, _BaseValidator);
+
+  function Arr() {
+    _classCallCheck(this, Arr);
+
+    return _possibleConstructorReturn(this, (Arr.__proto__ || Object.getPrototypeOf(Arr)).apply(this, arguments));
+  }
+
+  _createClass(Arr, [{
+    key: 'exec',
+    value: function exec(value) {
+      // let _iterate = (key, _val)=>{
+      //   let _p = `${this.path}.${key}`;
+      //   let _v = ValidatorBuilder.getValidators();
+      //   if (!_v.hasOwnProperty(_p)) {
+      //     let _el = this.signature.elements[key] ||
+      //       this.signature.elements["*"];
+      //     ValidatorBuilder.create(_el, _p);
+      //   }
+      //   let _ = this.call(_p, _val);
+      //   if (typeof _ === "string") {
+      //     return _;
+      //   }
+      // };
+      var _ = this.checkType("array", value);
+      if (typeof _ !== "boolean") {
+        return _;
+      }
+      return true;
+    }
+  }]);
+
+  return Arr;
+}(BaseValidator);
+
 /**
  * @private
  */
-Validator.Object = function (_BaseValidator) {
-  _inherits(Obj, _BaseValidator);
+Validator.Object = function (_BaseValidator2) {
+  _inherits(Obj, _BaseValidator2);
 
   function Obj() {
     _classCallCheck(this, Obj);
@@ -861,15 +933,17 @@ Validator.Object = function (_BaseValidator) {
   _createClass(Obj, [{
     key: 'exec',
     value: function exec(value) {
-      var _this3 = this;
+      var _this5 = this;
 
+      console.log('exec ' + this.path);
       var _iterate = function _iterate(key, _val) {
-        var _p = _this3.path + '.' + key;
+        var _p = _this5.path + '.' + key;
         var _v = ValidatorBuilder.getValidators();
         if (!_v.hasOwnProperty(_p)) {
-          ValidatorBuilder.create(_this3.signature.elements[key], _p);
+          var _el = _this5.signature.elements[key] || _this5.signature.elements["*"];
+          ValidatorBuilder.create(_el, _p);
         }
-        var _ = _this3.call(_p, _val);
+        var _ = _this5.call(_p, _val);
         if (typeof _ === "string") {
           return _;
         }
@@ -884,6 +958,7 @@ Validator.Object = function (_BaseValidator) {
           }
         } else {
           for (var _ in value) {
+            console.log('exec ' + this.path);
             var e = this.call(this.path, value[_]);
             if (typeof e === "string") {
               return e;
@@ -905,8 +980,8 @@ Validator.Object = function (_BaseValidator) {
 /**
  * @private
  */
-Validator.Boolean = function (_BaseValidator2) {
-  _inherits(Bool, _BaseValidator2);
+Validator.Boolean = function (_BaseValidator3) {
+  _inherits(Bool, _BaseValidator3);
 
   function Bool() {
     _classCallCheck(this, Bool);
@@ -927,8 +1002,8 @@ Validator.Boolean = function (_BaseValidator2) {
 /**
  * @private
  */
-Validator.String = function (_BaseValidator3) {
-  _inherits(Str, _BaseValidator3);
+Validator.String = function (_BaseValidator4) {
+  _inherits(Str, _BaseValidator4);
 
   function Str() {
     _classCallCheck(this, Str);
@@ -939,15 +1014,18 @@ Validator.String = function (_BaseValidator3) {
   _createClass(Str, [{
     key: 'exec',
     value: function exec(value) {
-      var _ = void 0;
-      if (typeof (_ = this.checkType("string", value)) === "string") {
-        return _;
-      }
+      var _ = this.checkType("string", value);
+
       if (_exists(this.signature.restrict)) {
         if (!_exists(new RegExp(this.signature.restrict).exec(value))) {
           return 'value \'' + value + '\' for ' + this.path + ' did not match required expression';
         }
       }
+
+      if ((typeof _ === 'undefined' ? 'undefined' : _typeof2(_)).match(/^(boolean|string)+$/) !== null) {
+        return _;
+      }
+
       return true;
     }
   }]);
@@ -957,8 +1035,8 @@ Validator.String = function (_BaseValidator3) {
 /**
  * @private
  */
-Validator.Number = function (_BaseValidator4) {
-  _inherits(Num, _BaseValidator4);
+Validator.Number = function (_BaseValidator5) {
+  _inherits(Num, _BaseValidator5);
 
   function Num() {
     _classCallCheck(this, Num);
@@ -984,8 +1062,8 @@ Validator.Number = function (_BaseValidator4) {
 /**
  * @private
  */
-Validator.Function = function (_BaseValidator5) {
-  _inherits(Fun, _BaseValidator5);
+Validator.Function = function (_BaseValidator6) {
+  _inherits(Fun, _BaseValidator6);
 
   function Fun() {
     _classCallCheck(this, Fun);
@@ -1008,8 +1086,8 @@ Validator.Function = function (_BaseValidator5) {
 /**
  * @private
  */
-Validator.Default = function (_BaseValidator6) {
-  _inherits(Def, _BaseValidator6);
+Validator.Default = function (_BaseValidator7) {
+  _inherits(Def, _BaseValidator7);
 
   function Def() {
     _classCallCheck(this, Def);
@@ -1020,17 +1098,20 @@ Validator.Default = function (_BaseValidator6) {
   _createClass(Def, [{
     key: 'exec',
     value: function exec(value) {
-      var _this9 = this;
+      var _this11 = this;
 
       var _testValidator = function _testValidator(type, value) {
         var _val = Validator[_global.wf.wfUtils.Str.capitalize(type)];
         if (!_exists(_val)) {
-          return '\'' + _this9.path + '\' was unable to obtain validator for type \'<' + type + '>\'';
+          return '\'' + _this11.path + '\' was unable to obtain validator for type \'<' + type + '>\'';
         }
-        var _ = new _val(_this9.path, _this9.signature);
+        var _ = new _val(_this11.path, _this11.signature);
         return _.exec(value);
       };
       var _x = typeof this.signature.type === "string" ? _schemaroller_.getClass(this.signature.type) : this.signature.type;
+      if (_x === "*") {
+        return true;
+      }
       var _tR = this.checkType(_x, value);
       if (typeof _tR === "string") {
         return _tR;
@@ -1104,9 +1185,12 @@ var ValidatorBuilder = function () {
       _validators.get(this)[_path] = func;
       return this;
     }
+
     /**
-     * @param {object} _ref
-     * @param {string} _path
+     *
+     * @param ref
+     * @param path
+     * @returns {function(*=)}
      */
 
   }, {
@@ -1115,13 +1199,17 @@ var ValidatorBuilder = function () {
       if (!_exists(ref)) {
         throw "create requires object reference at arguments[0]";
       }
-      var _signatures = _exists(ref.polymorphic) ? ref.polymorphic : Array.isArray(ref) ? ref : [ref];
+
+      var _signatures = ref.hasOwnProperty("polymorphic") ? ref.polymorphic : Array.isArray(ref) ? ref : [ref];
+
       _validators.get(this)[path] = {};
+
       var _functs = _signatures.map(function (_sig) {
         var _typeof = _global.wf.wfUtils.Str.capitalize(_sig.type);
         var _hasKey = 0 <= Object.keys(Validator).indexOf(_typeof);
         return new Validator[_hasKey ? _typeof : "Default"](path, _sig);
       });
+
       return _validators.get(this)[path] = function (value) {
         var _result;
         for (var idx in _functs) {
@@ -1149,8 +1237,10 @@ var ValidatorBuilder = function () {
       }
       return _v[path](value);
     }
+
     /**
-     * @returns singleton ValidatorBuilder reference
+     * singleton instantiator
+     * @returns {ValidatorBuilder}
      */
 
   }], [{
@@ -1158,6 +1248,7 @@ var ValidatorBuilder = function () {
     value: function getInstance() {
       return new this();
     }
+
     /**
      * @returns validators WeakMap
      */
@@ -1167,27 +1258,17 @@ var ValidatorBuilder = function () {
     value: function getValidators() {
       return _validators.get(ValidatorBuilder.getInstance());
     }
+
     /**
      *
+     * @param signature
+     * @param path
      */
 
   }, {
     key: 'create',
     value: function create(signature, path) {
       ValidatorBuilder.getInstance().create(signature, path);
-    }
-    /**
-     *
-     */
-
-  }, {
-    key: 'getPolymorphic',
-    value: function getPolymorphic(signature, path) {
-      var _attr = path.split(".").pop();
-      // tests for element as child element on polymorphic object signature
-      if (_exists(signature.elements[_attr])) {
-        ValidatorBuilder.create(signature.elements[_attr], path);
-      }
     }
   }]);
 
@@ -1207,6 +1288,12 @@ var SchemaValidator = function () {
    * @param opts
    * @returns {*}
    */
+  /**
+   *
+   * @param _schema
+   * @param opts
+   * @returns {string}
+   */
   function SchemaValidator() {
     var _schema = arguments.length > 0 && arguments[0] !== undefined ? arguments[0] : {};
 
@@ -1220,7 +1307,7 @@ var SchemaValidator = function () {
       return _errorMsg || true;
     };
     // validates SCHEMA ENTRIES
-    var _iterate = Array.isArray(_schema) ? _schema : Object.keys(_schema);
+    var _iterate = Array.isArray(_schema) ? _schema.keys() : Object.keys(_schema);
     var _iteratorNormalCompletion6 = true;
     var _didIteratorError6 = false;
     var _iteratorError6 = undefined;
@@ -1400,16 +1487,17 @@ var SchemaValidator = function () {
           }
         }
       } else {
-        var _p = void 0,
-            keyPath = void 0;
-        if ((_p = (keyPath = key.split(".")).pop()) !== "elements") {
+        var keyPath = key.split(".");
+        var _p = keyPath.pop();
+        if (_p !== "elements") {
           if (_p === "default") {
             return true;
           }
           if (params.hasOwnProperty("polymorphic")) {
             return this.validateSchemaEntry(key, params.polymorphic);
           }
-          return 'value for schema element \'' + key + '\' was malformed. \n          Property \'type\' was missing';
+          var _e = "value for schema element " + "'" + key + "' was malformed. Property 'type' was missing";
+          return _e;
         } else {
           var _iteratorNormalCompletion10 = true;
           var _didIteratorError10 = false;
@@ -1547,7 +1635,7 @@ var SchemaValidator = function () {
       if (_typeof2(_schemaKeys[sKey]) === "object") {
         // handles `elements` object
         if (sKey === "elements") {
-          var _iterate2 = Array.isArray(params.elements) ? params.elements : Object.keys(params.elements);
+          var _iterate2 = Array.isArray(params.elements) ? params.elements.keys() : Object.keys(params.elements);
           var _iteratorNormalCompletion11 = true;
           var _didIteratorError11 = false;
           var _iteratorError11 = undefined;
@@ -1654,16 +1742,16 @@ var SchemaValidator = function () {
         // handles non-object entries (Function, String, Number, Boolean, ...)
         var _t = typeof params === 'undefined' ? 'undefined' : _typeof2(params);
         if (_t !== "function") {
-          var _2 = _schemaKeys[key.split(".").pop()];
+          var _3 = _schemaKeys[key.split(".").pop()];
           // tests for everything that"s not a string, _object or function
-          if (_2 !== _global.wf.wfUtils.Str.capitalize(_t)) {
+          if (_3 !== _global.wf.wfUtils.Str.capitalize(_t)) {
             return 'value for schema element \'' + key + '\' has invalid type :: \'<' + _t + '>\'';
           }
         } else {
-          var _3 = _global.wf.wfUtils.Fun.getConstructorName(params);
+          var _4 = _global.wf.wfUtils.Fun.getConstructorName(params);
           // tests for function"s constructor name
-          if (_3 !== _schemaKeys[key]) {
-            return 'value for schema element \'' + key + '\' has invalid class or method \'<' + _3 + '>\'';
+          if (_4 !== _schemaKeys[key]) {
+            return 'value for schema element \'' + key + '\' has invalid class or method \'<' + _4 + '>\'';
           }
         }
         return true;
@@ -1691,8 +1779,11 @@ var SchemaHelpers = function () {
     }
     this._ref = _ref;
   }
+
   /**
    *
+   * @param obj
+   * @returns {*}
    */
 
 
@@ -1712,15 +1803,19 @@ var SchemaHelpers = function () {
       }
       return this._ref;
     }
+
     /**
      *
+     * @param key
+     * @param value
+     * @returns {*}
      */
 
   }, {
     key: 'setChildObject',
     value: function setChildObject(key, value) {
       var _mdData = {
-        _path: key, // `${this._ref.path}.${key}`,
+        _path: key, // this._ref.path.length > 0 ? `${this._ref.path}.${key}` : key,
         _root: this._ref.root
       };
       var _s = this.createSchemaChild(key, value, this._ref.options, _mdData);
@@ -1728,6 +1823,44 @@ var SchemaHelpers = function () {
         return '"' + key + '" was invalid';
       }
       return _s[_s instanceof Vector ? "replaceAll" : "set"](value);
+    }
+
+    /**
+     *
+     * @param key
+     * @param value
+     * @param opts
+     * @param metaData
+     * @returns {*}
+     */
+
+  }, {
+    key: 'createSchemaChild',
+    value: function createSchemaChild(key, value, opts, metaData) {
+      var _kinds;
+      // tests if value is not Array
+      if (!Array.isArray(value)) {
+        var _md = new _metaData(this._ref, metaData || {
+          _path: key,
+          _root: this._ref.root
+        });
+        var _schemaDef = this._ref.signature[key] || this._ref.signature["*"] || this._ref.signature;
+        // if (_schemaDef.hasOwnProperty("polymorphic")) {
+        //   _schemaDef = _schemaDef.polymorphic;
+        // }
+        return new Schema(_schemaDef, opts, _md);
+      } else {
+        _kinds = this.getKinds(this._ref.signature[key] || this._ref.signature);
+        if (Array.isArray(_kinds)) {
+          _kinds = _kinds.map(this.ensureKindIsString(value));
+          _kinds = _kinds.filter(function (itm) {
+            return itm !== null;
+          });
+          _kinds = _kinds.length ? _kinds : "*";
+          return new Vector(_kinds || "*", metaData);
+        }
+      }
+      return "unable to process value";
     }
 
     /**
@@ -1774,70 +1907,12 @@ var SchemaHelpers = function () {
       }
       return obj;
     }
-    /**
-     * @param {Object} value
-     * @param {_metaData} metaData
-     */
-
-  }, {
-    key: 'createSchemaChild',
-    value: function createSchemaChild(key, value, opts, metaData) {
-      var _kinds;
-      // tests if value is not Array
-      if (!Array.isArray(value)) {
-        var _md = new _metaData(this._ref, metaData || {
-          _path: key, // `${this._ref.path}.${key}`,
-          _root: this._ref.root
-        });
-        var _schemaDef = this._ref.signature || this._ref.signature["*"] || this._ref.signature[key];
-        return new Schema(_schemaDef, opts, _md);
-      } else {
-        _kinds = this.getKinds(this._ref.signature[key] || this._ref.signature);
-        if (Array.isArray(_kinds)) {
-          _kinds = _kinds.map(this.ensureKindIsString(value));
-          _kinds = _kinds.filter(function (itm) {
-            return itm !== null;
-          });
-          _kinds = _kinds.length ? _kinds : "*";
-          return new Vector(_kinds || "*", metaData);
-        }
-      }
-      return "unable to process value";
-    }
 
     /**
-     * builds validations from SCHEMA ENTRIES
-     * @private
-     */
-
-  }, {
-    key: 'walkSchema',
-    value: function walkSchema(obj, path) {
-      var result = [];
-      var _map = function _map(itm, objPath) {
-        return _walkSchema(itm, objPath);
-      };
-      var _elements = Array.isArray(obj) ? obj : Object.keys(obj);
-      for (var _i in _elements) {
-        var _k = _elements[_i];
-        var itm = void 0;
-        var objPath = _exists(path) ? path.length ? path + '.' + _k : _k : _k || "";
-        ValidatorBuilder.getInstance().create(obj[_k], objPath);
-        // tests for nested elements
-        if (_exists(obj[_k]) && _typeof2(obj[_k].elements) === "object") {
-          if (!Array.isArray(obj[_k].elements)) {
-            var _ = this.walkSchema(obj[_k].elements, objPath);
-            result.push(_);
-          } else {
-            var _4 = _map(obj[_k].elements, objPath);
-            result.push(_4);
-          }
-        }
-      }
-      return result;
-    }
-    /**
-     * @private
+     *
+     * @param _schema
+     * @param opts
+     * @returns {*}
      */
 
   }, {
@@ -1925,6 +2000,7 @@ var SchemaHelpers = function () {
         }
         ValidatorBuilder.getInstance().set(key, _ref);
       }
+      console.log('validate [\'' + this._ref.path + '\']: ' + JSON.stringify(value));
       msg = ValidatorBuilder.getInstance().exec(key, value);
       if (typeof msg === "string") {
         return msg;
@@ -1933,7 +2009,9 @@ var SchemaHelpers = function () {
     }
 
     /**
-     * @returns {array} list of types declared by object
+     *
+     * @param _s
+     * @returns {array} list of types declared by object}
      */
 
   }, {
@@ -1950,6 +2028,47 @@ var SchemaHelpers = function () {
       });
       return _elems.length ? _elems : null;
     }
+
+    /**
+     * builds validations from SCHEMA ENTRIES
+     * @private
+     */
+
+  }], [{
+    key: 'walkSchema',
+    value: function walkSchema(obj, path) {
+      if (Array.isArray(obj)) {
+        path = path.replace(/\.\\\\:poly/, "");
+        path = path.length ? path + '.*' : "*";
+        ValidatorBuilder.getInstance().create(obj, path);
+        return;
+      }
+
+      var _elements = Object.keys(obj);
+
+      for (var _i in _elements) {
+        var _k = _elements[_i];
+        var objPath = path || "";
+
+        objPath = objPath.replace(/\\\\:poly/, "*");
+
+        if (objPath.match(/\.?\\\\:elem+$/)) {
+          objPath = objPath.replace(/\\\\:elem/, _k || "");
+        } else {
+          objPath = path.length ? path + '.' + _k : _k;
+        }
+        ValidatorBuilder.getInstance().create(obj[_k], objPath);
+        // tests for nested elements
+        if (_exists(obj[_k])) {
+          if (obj[_k].hasOwnProperty("elements")) {
+            SchemaHelpers.walkSchema(obj[_k].elements, objPath + '.\\\\:elem');
+          }
+          if (obj[_k].hasOwnProperty("polymorphic")) {
+            SchemaHelpers.walkSchema(obj[_k].polymorphic, objPath + '.\\\\:poly');
+          }
+        }
+      }
+    }
   }]);
 
   return SchemaHelpers;
@@ -1958,3 +2077,4 @@ var SchemaHelpers = function () {
 ;
 exports.Schema = Schema;
 exports.SchemaHelpers = SchemaHelpers;
+exports.ValidatorBuilder = ValidatorBuilder;

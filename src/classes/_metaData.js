@@ -10,8 +10,7 @@ class _metaData {
   constructor(_oRef, _data = {}) {
     let _cName = _global.wf.wfUtils.Fun.getConstructorName(_oRef);
     if (!(_oRef instanceof Schema || _oRef instanceof Vector)) {
-      throw `new _metaData() argument 1 requires subclass Schema or Vector. 
-            Was subclass of '<${_cName}>'`;
+      throw `new _metaData() requires Schema or Vector. Was '<${_cName}>'`;
     }
     if (this._createID == null) {
       let _id = 0;
@@ -22,7 +21,7 @@ class _metaData {
         return this.__objID;
       };
     }
-    _data = Object.assign(_data, {
+    _data = Object.assign({}, _data, {
       _id: this._createID(),
       _className: _cName,
       _created: Date.now(),
